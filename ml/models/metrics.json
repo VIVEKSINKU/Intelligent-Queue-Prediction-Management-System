@@ -1,0 +1,65 @@
+{
+  "waiting_time": {
+    "Linear Regression": {
+      "MAE": 3.742,
+      "RMSE": 6.816,
+      "R2": 0.9422
+    },
+    "Ridge": {
+      "MAE": 3.742,
+      "RMSE": 6.816,
+      "R2": 0.9422
+    },
+    "Random Forest": {
+      "MAE": 1.538,
+      "RMSE": 4.287,
+      "R2": 0.9771
+    },
+    "XGBoost": {
+      "MAE": 1.493,
+      "RMSE": 4.094,
+      "R2": 0.9791
+    }
+  },
+  "queue_length": {
+    "Linear Regression": {
+      "MAE": 0.045,
+      "RMSE": 0.139,
+      "R2": 0.9999
+    },
+    "Ridge": {
+      "MAE": 0.045,
+      "RMSE": 0.139,
+      "R2": 0.9999
+    },
+    "Random Forest": {
+      "MAE": 0.29,
+      "RMSE": 0.704,
+      "R2": 0.9975
+    },
+    "XGBoost": {
+      "MAE": 0.259,
+      "RMSE": 0.536,
+      "R2": 0.9986
+    }
+  },
+  "peak_classification": {
+    "Random Forest Classifier": {
+      "Accuracy": 0.9734,
+      "Precision": 0.9667,
+      "Recall": 0.9667,
+      "F1": 0.9667
+    },
+    "XGBoost Classifier": {
+      "Accuracy": 0.9878,
+      "Precision": 0.9832,
+      "Recall": 0.9863,
+      "F1": 0.9847
+    }
+  },
+  "best_models": {
+    "waiting_time": "XGBoost",
+    "queue_length": "Linear Regression",
+    "peak_classifier": "XGBoost Classifier"
+  }
+}
