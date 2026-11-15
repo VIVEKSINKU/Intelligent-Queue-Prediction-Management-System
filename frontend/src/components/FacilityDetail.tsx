@@ -147,28 +147,28 @@ export const FacilityDetail: React.FC<FacilityDetailProps> = ({
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
             <span className="text-xs font-medium uppercase tracking-wider text-indigo-200 flex items-center justify-center">
               <Clock className="w-3.5 h-3.5 mr-1" />
-              Current Estimated Wait
+              Expected Current Wait
             </span>
             <div className="text-4xl font-black mt-2">
               {currentFacility.crowd_level === 'Closed' ? 'Closed' : `${currentFacility.estimated_wait_time_min}`}
               {currentFacility.crowd_level !== 'Closed' && <span className="text-sm font-normal text-indigo-200 ml-1">min</span>}
             </div>
             <p className="text-xs text-indigo-200 mt-1 capitalize">
-              Trend: {currentFacility.trend}
+              Predicted Crowd: {currentFacility.crowd_level}
             </p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
             <span className="text-xs font-medium uppercase tracking-wider text-indigo-200 flex items-center justify-center">
               <Users className="w-3.5 h-3.5 mr-1" />
-              Queue & Staffing
+              Service Capacity
             </span>
             <div className="text-4xl font-black mt-2">
-              {currentFacility.current_queue_length}
-              <span className="text-sm font-normal text-indigo-200 ml-1">in line</span>
+              {currentFacility.max_counters}
+              <span className="text-sm font-normal text-indigo-200 ml-1">counters</span>
             </div>
             <p className="text-xs text-indigo-200 mt-1">
-              {currentFacility.counters_open} of {currentFacility.max_counters} counters staffed
+              Active operating capacity
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export const FacilityDetail: React.FC<FacilityDetailProps> = ({
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-                Live Machine Learning Queue Forecast
+                Machine Learning Queue Forecast
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Predicted at 15-minute intervals using trained supervised XGBoost models
@@ -320,7 +320,7 @@ export const FacilityDetail: React.FC<FacilityDetailProps> = ({
           <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start space-x-2">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
             <p>
-              Slots updated dynamically every 30 seconds based on live counter throughput and class schedule density.
+              Optimal time slots determined by supervised ML models evaluating arrival rates, service times, and class schedule density.
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Clock, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, ChevronRight, MapPin } from 'lucide-react';
+import { Clock, AlertTriangle, ChevronRight, MapPin, Layers } from 'lucide-react';
 import { FacilityStatus } from '../services/api';
 
 interface FacilityCardProps {
@@ -15,7 +15,7 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onSelect }
       case 'Medium':
         return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800';
       case 'High':
-        return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-800 animate-pulse';
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-800';
       default:
         return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-300 dark:border-slate-700';
     }
@@ -26,30 +26,6 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onSelect }
     if (min < 5) return 'text-emerald-600 dark:text-emerald-400';
     if (min < 14) return 'text-amber-600 dark:text-amber-400';
     return 'text-rose-600 dark:text-rose-400';
-  };
-
-  const renderTrend = () => {
-    if (facility.trend === 'rising') {
-      return (
-        <span className="inline-flex items-center text-xs font-medium text-rose-600 dark:text-rose-400" title="Queue is lengthening">
-          <ArrowUpRight className="w-4 h-4 mr-0.5" />
-          Rising
-        </span>
-      );
-    } else if (facility.trend === 'falling') {
-      return (
-        <span className="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400" title="Queue is clearing">
-          <ArrowDownRight className="w-4 h-4 mr-0.5" />
-          Clearing
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400" title="Queue is steady">
-        <Minus className="w-4 h-4 mr-0.5" />
-        Steady
-      </span>
-    );
   };
 
   return (
@@ -82,46 +58,48 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onSelect }
           <span className="truncate">{facility.location}</span>
         </p>
 
-        {/* Core Live Metrics: Estimated Wait Time & Queue Length */}
+        {/* ML Prediction Overview Box */}
         <div className="grid grid-cols-2 gap-3 my-5 py-3 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
           <div>
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center">
               <Clock className="w-3 h-3 mr-1" />
-              Est. Wait
+              Predicted Wait
             </span>
             <div className="mt-1 flex items-baseline space-x-1">
-              <span className={`text-2xl font-black ${getWaitColor(facility.estimated_wait_time_min, facility.crowd_level)}`}>
-                {facility.crowd_level === 'Closed' ? '—' : `${facility.estimated_wait_time_min}`}
-              </span>
-              {facility.crowd_level !== 'Closed' && (
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">min</span>
+              {facility.crowd_level === 'Closed' ? (
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold text-slate-400">Closed</span>
+                  <span className="text-[10px] text-slate-400">Reopens 08:00 AM</span>
+                </div>
+              ) : (
+                <>
+                  <span className={`text-2xl font-black ${getWaitColor(facility.estimated_wait_time_min, facility.crowd_level)}`}>
+                    {facility.estimated_wait_time_min}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">min</span>
+                </>
               )}
             </div>
           </div>
 
           <div>
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center">
-              <Users className="w-3 h-3 mr-1" />
-              In Line
+              <Layers className="w-3 h-3 mr-1" />
+              Service Desks
             </span>
             <div className="mt-1 flex items-baseline space-x-1">
               <span className="text-2xl font-black text-slate-900 dark:text-white">
-                {facility.crowd_level === 'Closed' ? '0' : facility.current_queue_length}
+                {facility.max_counters}
               </span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">people</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">counters</span>
             </div>
           </div>
         </div>
 
-        {/* Counters Open & Trend */}
-        <div className="flex items-center justify-between text-xs py-1 text-slate-600 dark:text-slate-300">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-            <span>
-              <strong>{facility.counters_open}</strong> of {facility.max_counters} counters open
-            </span>
-          </div>
-          <div>{renderTrend()}</div>
+        {/* Operating hours */}
+        <div className="text-xs text-slate-500 dark:text-slate-400 py-1">
+          <span className="font-semibold text-slate-700 dark:text-slate-300">Hours: </span>
+          {facility.operating_hours}
         </div>
       </div>
 
