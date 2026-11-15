@@ -30,12 +30,10 @@ flowchart TD
     end
 
     subgraph Student-Facing Frontend
-        J -->|30-second live polling| K[React + Vite + Tailwind CSS + Recharts UI]
-        K --> L1[Live Overview: Facility Cards, Crowd Badges & Search]
+        J --> K[React + Vite + Tailwind CSS + Recharts UI]
+        K --> L1[Facilities Directory: Facility Cards, Crowd Badges & Search]
         K --> L2[Facility Detail: 1-3h Forecasts & Weekday Heatmaps]
         K --> L3[Wait Time Calculator: Custom Date/Time Inference]
-        K --> L4[Peak Avoidance Guide & Counter Speed Tips]
-        K --> L5[Analytics & ML Hub: Metrics Comparison & Plot Viewer]
     end
 ```
 
@@ -76,7 +74,6 @@ flowchart TD
    - Interactive Swagger documentation at `http://localhost:8000/docs`.
 
 4. **Modern Student UI (`React` + `Vite` + `Tailwind CSS` + `Recharts`)**:
-   - **Live Polling**: Background refresh every 30 seconds with countdown badge and manual trigger.
    - **Light / Dark Mode**: Seamless toggle with persisted user preference.
    - **Search & Filter**: Real-time search across facility names, locations, and category pills.
    - **Interactive Charts**: Responsive dual-axis forecast line charts, hourly crowd bar charts, weekly color-coded heatmaps, and ML diagnostic image viewer.
@@ -122,15 +119,13 @@ Intelligent-Queue-Prediction-Management-System/
 ├── frontend/                          # React + Vite + Tailwind CSS + Recharts
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── AnalyticsHub.tsx       # ML metrics, trend lines & plot gallery
-│   │   │   ├── FacilityCard.tsx       # Live status card with crowd badges
+│   │   │   ├── FacilityCard.tsx       # Facility summary card with crowd badges
 │   │   │   ├── FacilityDetail.tsx     # Forecast charts, best times & weekly heatmap
-│   │   │   ├── Navbar.tsx             # Navigation, 30s counter & theme toggle
-│   │   │   ├── PeakGuides.tsx         # Bottleneck schedule & fast-track tips
+│   │   │   ├── Navbar.tsx             # Header navigation & theme toggle
 │   │   │   └── WaitTimePredictor.tsx  # Point inference interactive calculator
 │   │   ├── services/
 │   │   │   └── api.ts                 # Typed fetch client
-│   │   ├── App.tsx                    # Top-level view coordinator & polling state
+│   │   ├── App.tsx                    # Top-level view coordinator
 │   │   ├── index.css                  # Tailwind styles
 │   │   └── main.tsx                   # React root entry
 │   ├── dist/                          # Production-ready build served by backend
@@ -189,17 +184,8 @@ python ml/train.py
 
 ---
 
-## Hardware Sensor & Kiosk Integration
+## Predictive ML Inference
 
-In a production campus deployment with computer vision people-counters or electronic ticketing kiosks (e.g. Qmatic or Nemo-Q):
-1. The camera or kiosk publishes a message upon people count changes.
-2. In `backend/app/services/queue_service.py`, call:
-   ```python
-   record_realtime_sensor_event(
-       facility_id="FAC_02",
-       queue_count=18,
-       counters_open=4,
-       source="Overhead CV Camera"
-   )
-   ```
-3. The backend caches the live physical reading, stores an audit snapshot in SQLite, and the student dashboard updates automatically via its 30-second polling cycle.
+The system performs predictive inference through `ml/predict.py`:
+- Models evaluated: XGBoost Regressor (Wait Time), Linear Regressor (Queue Length), and XGBoost Classifier (Peak Detection).
+- Students can query point predictions for any facility, date, and hour via the interactive web UI or by sending a request to `POST /api/predict`.
