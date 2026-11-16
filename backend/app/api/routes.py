@@ -106,7 +106,8 @@ def custom_predict(request: PredictRequest):
         is_peak=result["is_peak"],
         crowd_level=result["crowd_level"],
         counters_open=result["counters_open"],
-        explanation=explanation
+        explanation=explanation,
+        prediction_method=result.get("prediction_method", "model_calendar_nolag")
     )
 
 @router.get("/facilities/{facility_id}/best-time", response_model=BestTimeResponse, summary="Find best 3 time slots today")
