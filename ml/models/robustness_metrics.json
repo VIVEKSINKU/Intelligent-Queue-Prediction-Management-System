@@ -1,0 +1,26 @@
+{
+  "description": "Trained on perturbed dataset (+25% arrival rate, doubled log-normal service variance), tested on original unperturbed October test set.",
+  "waiting_time": {
+    "in_distribution_mae": 2.854,
+    "in_distribution_r2": 0.9641,
+    "shifted_distribution_mae": 37.168,
+    "shifted_distribution_rmse": 80.903,
+    "shifted_distribution_r2": -7.5793,
+    "mae_increase_pct": 1202.32,
+    "r2_drop_points": 8.5434
+  },
+  "queue_length": {
+    "in_distribution_mae": 1.177,
+    "in_distribution_r2": 0.9796,
+    "shifted_distribution_mae": 10.284,
+    "shifted_distribution_rmse": 24.05,
+    "shifted_distribution_r2": -2.0882,
+    "mae_increase_pct": 773.75,
+    "r2_drop_points": 3.0678
+  },
+  "peak_classification": {
+    "in_distribution_f1": 0.9368,
+    "shifted_distribution_f1": 0.7833,
+    "f1_drop_pct": 16.38
+  }
+}

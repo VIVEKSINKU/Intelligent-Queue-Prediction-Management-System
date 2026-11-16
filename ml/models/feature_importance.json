@@ -1,194 +1,194 @@
 [
   [
-    "waiting_time_rolling_30min",
-    0.8233035206794739
+    "num__waiting_time_lag_1",
+    0.42471587657928467
   ],
   [
-    "departure_rate",
-    0.029717030003666878
+    "num__waiting_time_rolling_30min",
+    0.4101293087005615
   ],
   [
-    "queue_length_lag_3",
-    0.024002594873309135
+    "num__num_counters_open",
+    0.02840164490044117
   ],
   [
-    "queue_length_lag_1",
-    0.020983636379241943
+    "num__hist_wait_mean",
+    0.02160217985510826
   ],
   [
-    "avg_service_time_min",
-    0.018270516768097878
+    "num__queue_length_lag_1",
+    0.021593041718006134
   ],
   [
-    "hour_sin",
-    0.012959171086549759
+    "num__avg_service_time_min",
+    0.020760636776685715
   ],
   [
-    "arrival_rate",
-    0.01215876080095768
+    "num__queue_length_lag_2",
+    0.011754569597542286
   ],
   [
-    "num_counters_open",
-    0.010224658064544201
+    "num__queue_length_lag_3",
+    0.011131592094898224
   ],
   [
-    "queue_length_lag_2",
-    0.006791921332478523
+    "num__hist_peak_rate",
+    0.004323766101151705
   ],
   [
-    "arrivals_rolling_1h",
-    0.005725006107240915
+    "cat__facility_id_FAC_04",
+    0.0040876297280192375
   ],
   [
-    "avg_wait_same_hour_last_week",
-    0.005437306594103575
+    "cat__academic_period_Registration",
+    0.003490838222205639
   ],
   [
-    "facility_id_FAC_03",
-    0.0030412920750677586
+    "cat__facility_id_FAC_03",
+    0.003230434376746416
   ],
   [
-    "facility_id_FAC_05",
-    0.0029181581921875477
+    "num__hour_sin",
+    0.003005651757121086
   ],
   [
-    "num_staff_on_duty",
-    0.0023788458202034235
+    "num__arrivals_rolling_1h",
+    0.0025869449600577354
   ],
   [
-    "deadline_proximity_days",
-    0.002281363820657134
+    "cat__facility_id_FAC_01",
+    0.0024741359520703554
   ],
   [
-    "facility_id_FAC_04",
-    0.0022385905031114817
+    "cat__weather_Cloudy",
+    0.0023790050763636827
   ],
   [
-    "weather_Cloudy",
-    0.0021954902913421392
+    "cat__meal_period_Non-Meal",
+    0.0021547600626945496
   ],
   [
-    "minute_cos",
-    0.0018105092458426952
+    "cat__facility_id_FAC_05",
+    0.002124263672158122
   ],
   [
-    "facility_id_FAC_01",
-    0.0017344853840768337
+    "num__hour_cos",
+    0.0019511427963152528
   ],
   [
-    "weather_Rainy",
-    0.001686033676378429
+    "num__hist_queue_mean",
+    0.0019058550242334604
   ],
   [
-    "hour_cos",
-    0.001602026866748929
+    "num__num_staff_on_duty",
+    0.0015334001509472728
   ],
   [
-    "academic_period_Normal",
-    0.0011016683420166373
+    "num__class_schedule_density",
+    0.001307751052081585
   ],
   [
-    "facility_id_FAC_02",
-    0.0009439774439670146
+    "num__deadline_proximity_days",
+    0.0011535482481122017
   ],
   [
-    "academic_period_Registration",
-    0.0009214546298608184
+    "cat__weather_Sunny",
+    0.0011305431835353374
   ],
   [
-    "group_size",
-    0.0008923894492909312
+    "num__event_flag",
+    0.0011011409806087613
   ],
   [
-    "weather_Sunny",
-    0.0007145562558434904
+    "cat__weather_Rainy",
+    0.0010878278408199549
   ],
   [
-    "minute_sin",
-    0.000703534169588238
+    "num__minute_cos",
+    0.0010573052568361163
   ],
   [
-    "class_schedule_density",
-    0.0006791900959797204
+    "cat__facility_id_FAC_02",
+    0.0010214074281975627
   ],
   [
-    "dow_cos",
-    0.000612488656770438
+    "num__dow_sin",
+    0.0009619061602279544
   ],
   [
-    "weather_Cold",
-    0.000550599186681211
+    "cat__academic_period_Normal",
+    0.0009468684438616037
   ],
   [
-    "event_flag",
-    0.0005163009627722204
+    "num__minute_sin",
+    0.0009049880900420249
   ],
   [
-    "is_exam_week",
-    0.00039005023427307606
+    "cat__academic_period_Fee Payment Due",
+    0.0008706447551958263
   ],
   [
-    "meal_period_Non-Meal",
-    0.00027970399241894484
+    "cat__weather_Cold",
+    0.0008196035632863641
   ],
   [
-    "dow_sin",
-    0.00023069418966770172
+    "num__group_size",
+    0.0006099810707382858
   ],
   [
-    "academic_period_Fee Payment Due",
-    2.45134128817881e-06
+    "cat__academic_period_Summer Break",
+    0.0005543649313040078
   ],
   [
-    "is_weekend",
+    "num__is_exam_week",
+    0.00041335533023811877
+  ],
+  [
+    "num__dow_cos",
+    0.00037247277214191854
+  ],
+  [
+    "num__is_holiday",
+    0.00034961896017193794
+  ],
+  [
+    "num__is_weekend",
     0.0
   ],
   [
-    "is_holiday",
+    "cat__facility_type_Administrative",
     0.0
   ],
   [
-    "facility_type_Administrative",
+    "cat__facility_type_Dining",
     0.0
   ],
   [
-    "facility_type_Dining",
+    "cat__facility_type_Financial",
     0.0
   ],
   [
-    "facility_type_Financial",
+    "cat__facility_type_Library",
     0.0
   ],
   [
-    "facility_type_Library",
+    "cat__facility_type_Student Services",
     0.0
   ],
   [
-    "facility_type_Student Services",
+    "cat__academic_period_Midterms",
     0.0
   ],
   [
-    "academic_period_Final Exams",
+    "cat__meal_period_Breakfast",
     0.0
   ],
   [
-    "academic_period_Midterms",
+    "cat__meal_period_Dinner",
     0.0
   ],
   [
-    "academic_period_Summer Break",
-    0.0
-  ],
-  [
-    "meal_period_Breakfast",
-    0.0
-  ],
-  [
-    "meal_period_Dinner",
-    0.0
-  ],
-  [
-    "meal_period_Lunch",
+    "cat__meal_period_Lunch",
     0.0
   ]
 ]

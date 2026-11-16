@@ -1,0 +1,15 @@
+{
+  "python_version": "3.13.0 (tags/v3.13.0:60403a5, Oct  7 2024, 09:38:07) [MSC v.1941 64 bit (AMD64)]",
+  "sklearn_version": "1.9.1",
+  "xgboost_version": "3.4.1",
+  "training_date": "2026-11-16T17:28:00",
+  "data_hash": "4e2504337a9641a0356e3078f1ed29840479e8c1afd7a3b77893d7e570f7ce9a",
+  "data_path": "C:\\Users\\Vivek\\OneDrive\\Desktop\\10th class\\CLASSNOTES\\sem5\\superptoject\\Intelligent-Queue-Prediction-Management-System\\data\\queue_data.csv",
+  "random_seed": 42,
+  "walk_forward_folds": 4,
+  "best_models": {
+    "waiting_time": "XGBoost",
+    "queue_length": "XGBoost",
+    "peak_classifier": "XGBoost Classifier"
+  }
+}

@@ -1,65 +1,380 @@
 {
+  "metadata": {
+    "data_hash": "4e2504337a9641a0356e3078f1ed29840479e8c1afd7a3b77893d7e570f7ce9a",
+    "trained_at": "2026-11-16T17:31:51.235338",
+    "train_rows": 55845,
+    "test_rows": 11315,
+    "walk_forward_folds": 4
+  },
+  "baselines": {
+    "waiting_time": {
+      "Persistence (15-min)": {
+        "MAE": 5.441,
+        "RMSE": 11.503,
+        "R2": 0.8266
+      },
+      "Historical Mean (Train)": {
+        "MAE": 9.592,
+        "RMSE": 19.557,
+        "R2": 0.4986
+      }
+    },
+    "queue_length": {
+      "Persistence (15-min)": {
+        "MAE": 1.434,
+        "RMSE": 2.761,
+        "R2": 0.9593
+      },
+      "Historical Mean (Train)": {
+        "MAE": 4.852,
+        "RMSE": 9.495,
+        "R2": 0.5187
+      }
+    },
+    "peak_classification": {
+      "Majority Class": {
+        "Accuracy": 0.6147,
+        "Precision": 0.0,
+        "Recall": 0.0,
+        "F1": 0.0
+      },
+      "Historical Hour Rule": {
+        "Accuracy": 0.8432,
+        "Precision": 0.8287,
+        "Recall": 0.7477,
+        "F1": 0.7861
+      }
+    }
+  },
   "waiting_time": {
     "Linear Regression": {
-      "MAE": 3.742,
-      "RMSE": 6.816,
-      "R2": 0.9422
+      "MAE": 5.924,
+      "RMSE": 9.599,
+      "R2": 0.8792,
+      "improvement_over_baseline_pct": -8.88
     },
     "Ridge": {
-      "MAE": 3.742,
-      "RMSE": 6.816,
-      "R2": 0.9422
+      "MAE": 5.922,
+      "RMSE": 9.599,
+      "R2": 0.8792,
+      "improvement_over_baseline_pct": -8.84
     },
     "Random Forest": {
-      "MAE": 1.538,
-      "RMSE": 4.287,
-      "R2": 0.9771
+      "MAE": 2.875,
+      "RMSE": 5.135,
+      "R2": 0.9654,
+      "improvement_over_baseline_pct": 47.16
     },
     "XGBoost": {
-      "MAE": 1.493,
-      "RMSE": 4.094,
-      "R2": 0.9791
+      "MAE": 2.854,
+      "RMSE": 5.231,
+      "R2": 0.9641,
+      "improvement_over_baseline_pct": 47.55
     }
   },
   "queue_length": {
     "Linear Regression": {
-      "MAE": 0.045,
-      "RMSE": 0.139,
-      "R2": 0.9999
+      "MAE": 1.585,
+      "RMSE": 2.574,
+      "R2": 0.9646,
+      "improvement_over_baseline_pct": -10.53
     },
     "Ridge": {
-      "MAE": 0.045,
-      "RMSE": 0.139,
-      "R2": 0.9999
+      "MAE": 1.584,
+      "RMSE": 2.574,
+      "R2": 0.9646,
+      "improvement_over_baseline_pct": -10.46
     },
     "Random Forest": {
-      "MAE": 0.29,
-      "RMSE": 0.704,
-      "R2": 0.9975
+      "MAE": 1.207,
+      "RMSE": 2.059,
+      "R2": 0.9774,
+      "improvement_over_baseline_pct": 15.83
     },
     "XGBoost": {
-      "MAE": 0.259,
-      "RMSE": 0.536,
-      "R2": 0.9986
+      "MAE": 1.177,
+      "RMSE": 1.953,
+      "R2": 0.9796,
+      "improvement_over_baseline_pct": 17.92
     }
   },
   "peak_classification": {
     "Random Forest Classifier": {
-      "Accuracy": 0.9734,
-      "Precision": 0.9667,
-      "Recall": 0.9667,
-      "F1": 0.9667
+      "Accuracy": 0.95,
+      "Precision": 0.9457,
+      "Recall": 0.9232,
+      "F1": 0.9343,
+      "improvement_over_baseline_pct": 18.85
     },
     "XGBoost Classifier": {
-      "Accuracy": 0.9878,
-      "Precision": 0.9832,
-      "Recall": 0.9863,
-      "F1": 0.9847
+      "Accuracy": 0.952,
+      "Precision": 0.9509,
+      "Recall": 0.9232,
+      "F1": 0.9368,
+      "improvement_over_baseline_pct": 19.17
+    }
+  },
+  "horizons": {
+    "15m": {
+      "waiting_time": {
+        "MAE": 2.882,
+        "RMSE": 5.285,
+        "R2": 0.9634
+      },
+      "queue_length": {
+        "MAE": 1.182,
+        "RMSE": 1.96,
+        "R2": 0.9795
+      },
+      "is_peak": {
+        "Accuracy": 0.9518,
+        "Precision": 0.9504,
+        "Recall": 0.9232,
+        "F1": 0.9366
+      }
+    },
+    "1h": {
+      "waiting_time": {
+        "MAE": 5.088,
+        "RMSE": 8.983,
+        "R2": 0.8942
+      },
+      "queue_length": {
+        "MAE": 2.236,
+        "RMSE": 3.885,
+        "R2": 0.9194
+      },
+      "is_peak": {
+        "Accuracy": 0.9073,
+        "Precision": 0.9136,
+        "Recall": 0.8388,
+        "F1": 0.8746
+      }
+    },
+    "2h": {
+      "waiting_time": {
+        "MAE": 5.824,
+        "RMSE": 10.489,
+        "R2": 0.8558
+      },
+      "queue_length": {
+        "MAE": 2.659,
+        "RMSE": 4.924,
+        "R2": 0.8705
+      },
+      "is_peak": {
+        "Accuracy": 0.8985,
+        "Precision": 0.9116,
+        "Recall": 0.8156,
+        "F1": 0.8609
+      }
+    },
+    "3h": {
+      "waiting_time": {
+        "MAE": 6.172,
+        "RMSE": 12.001,
+        "R2": 0.8112
+      },
+      "queue_length": {
+        "MAE": 2.849,
+        "RMSE": 5.39,
+        "R2": 0.8449
+      },
+      "is_peak": {
+        "Accuracy": 0.8955,
+        "Precision": 0.9123,
+        "Recall": 0.8064,
+        "F1": 0.8561
+      }
+    },
+    "no_lag_calendar": {
+      "waiting_time": {
+        "MAE": 6.653,
+        "RMSE": 14.013,
+        "R2": 0.7426
+      },
+      "queue_length": {
+        "MAE": 3.145,
+        "RMSE": 6.225,
+        "R2": 0.7931
+      },
+      "is_peak": {
+        "Accuracy": 0.8954,
+        "Precision": 0.9121,
+        "Recall": 0.8064,
+        "F1": 0.856
+      }
+    }
+  },
+  "per_facility": {
+    "FAC_01": {
+      "waiting_time": {
+        "MAE": 2.796,
+        "RMSE": 4.771,
+        "R2": 0.9732
+      },
+      "queue_length": {
+        "MAE": 0.882,
+        "RMSE": 1.404,
+        "R2": 0.9874
+      },
+      "is_peak": {
+        "Accuracy": 0.9761,
+        "Precision": 0.9737,
+        "Recall": 0.9697,
+        "F1": 0.9717
+      }
+    },
+    "FAC_02": {
+      "waiting_time": {
+        "MAE": 1.686,
+        "RMSE": 2.558,
+        "R2": 0.9558
+      },
+      "queue_length": {
+        "MAE": 2.071,
+        "RMSE": 3.171,
+        "R2": 0.978
+      },
+      "is_peak": {
+        "Accuracy": 0.9461,
+        "Precision": 0.9365,
+        "Recall": 0.8073,
+        "F1": 0.8671
+      }
+    },
+    "FAC_03": {
+      "waiting_time": {
+        "MAE": 4.721,
+        "RMSE": 8.822,
+        "R2": 0.9595
+      },
+      "queue_length": {
+        "MAE": 0.905,
+        "RMSE": 1.386,
+        "R2": 0.9897
+      },
+      "is_peak": {
+        "Accuracy": 0.985,
+        "Precision": 0.9876,
+        "Recall": 0.9889,
+        "F1": 0.9882
+      }
+    },
+    "FAC_04": {
+      "waiting_time": {
+        "MAE": 2.579,
+        "RMSE": 3.666,
+        "R2": 0.8661
+      },
+      "queue_length": {
+        "MAE": 1.287,
+        "RMSE": 1.875,
+        "R2": 0.9407
+      },
+      "is_peak": {
+        "Accuracy": 0.9121,
+        "Precision": 0.9141,
+        "Recall": 0.8704,
+        "F1": 0.8917
+      }
+    },
+    "FAC_05": {
+      "waiting_time": {
+        "MAE": 2.488,
+        "RMSE": 4.031,
+        "R2": 0.8822
+      },
+      "queue_length": {
+        "MAE": 0.74,
+        "RMSE": 1.268,
+        "R2": 0.8937
+      },
+      "is_peak": {
+        "Accuracy": 0.9408,
+        "Precision": 0.8811,
+        "Recall": 0.861,
+        "F1": 0.8709
+      }
+    }
+  },
+  "walk_forward_cv": {
+    "15m": {
+      "waiting_time": {
+        "MAE_mean": 3.073,
+        "MAE_std": 0.215,
+        "R2_mean": 0.9494,
+        "R2_std": 0.0023
+      },
+      "queue_length": {
+        "MAE_mean": 1.254,
+        "MAE_std": 0.142,
+        "R2_mean": 0.972,
+        "R2_std": 0.0056
+      },
+      "is_peak": {
+        "F1_mean": 0.9276,
+        "F1_std": 0.0049
+      }
+    },
+    "1h": {
+      "waiting_time": {
+        "MAE_mean": 5.555,
+        "MAE_std": 0.72,
+        "R2_mean": 0.8517,
+        "R2_std": 0.0387
+      },
+      "queue_length": {
+        "MAE_mean": 2.541,
+        "MAE_std": 0.523,
+        "R2_mean": 0.8682,
+        "R2_std": 0.0514
+      },
+      "is_peak": {
+        "F1_mean": 0.8513,
+        "F1_std": 0.0103
+      }
+    },
+    "2h": {
+      "waiting_time": {
+        "MAE_mean": 6.338,
+        "MAE_std": 0.866,
+        "R2_mean": 0.8024,
+        "R2_std": 0.0529
+      },
+      "queue_length": {
+        "MAE_mean": 2.974,
+        "MAE_std": 0.534,
+        "R2_mean": 0.8028,
+        "R2_std": 0.0497
+      },
+      "is_peak": {
+        "F1_mean": 0.8317,
+        "F1_std": 0.0103
+      }
+    },
+    "3h": {
+      "waiting_time": {
+        "MAE_mean": 6.678,
+        "MAE_std": 0.998,
+        "R2_mean": 0.7781,
+        "R2_std": 0.0664
+      },
+      "queue_length": {
+        "MAE_mean": 3.086,
+        "MAE_std": 0.587,
+        "R2_mean": 0.7928,
+        "R2_std": 0.0552
+      },
+      "is_peak": {
+        "F1_mean": 0.8265,
+        "F1_std": 0.0111
+      }
     }
   },
   "best_models": {
     "waiting_time": "XGBoost",
-    "queue_length": "Linear Regression",
+    "queue_length": "XGBoost",
     "peak_classifier": "XGBoost Classifier"
   }
 }

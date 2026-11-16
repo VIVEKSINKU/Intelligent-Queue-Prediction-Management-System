@@ -10,13 +10,11 @@ import joblib
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-# Global cached artifacts
-_WAIT_MODEL = None
-_QUEUE_MODEL = None
-_PEAK_MODEL = None
-_FEATURE_NAMES = None
-_LOOKUP_DF = None
-_DATASET_CACHE = None
+# Artifact cache
+_CACHED_MODELS: Dict[str, Any] = {}
+_CACHED_PREPS: Dict[str, Any] = {}
+_LOOKUP_DF: Optional[pd.DataFrame] = None
+_GLOBAL_LOOKUP_STATS = {"wait": 7.8, "queue": 3.4, "peak": 0.24}
 
 FACILITY_METADATA = {
     "FAC_01": {
@@ -81,32 +79,60 @@ FACILITY_METADATA = {
     }
 }
 
-def load_ml_artifacts():
-    global _WAIT_MODEL, _QUEUE_MODEL, _PEAK_MODEL, _FEATURE_NAMES, _LOOKUP_DF
-    if _WAIT_MODEL is None:
-        wait_path = os.path.join(MODELS_DIR, "best_wait_time_model.joblib")
-        queue_path = os.path.join(MODELS_DIR, "best_queue_length_model.joblib")
-        peak_path = os.path.join(MODELS_DIR, "best_peak_classifier.joblib")
-        feats_path = os.path.join(MODELS_DIR, "feature_names.json")
+def load_lookup_table() -> pd.DataFrame:
+    global _LOOKUP_DF
+    if _LOOKUP_DF is None:
         lookup_path = os.path.join(MODELS_DIR, "historical_hourly_lookup.csv")
-        
-        _WAIT_MODEL = joblib.load(wait_path)
-        _QUEUE_MODEL = joblib.load(queue_path)
-        _PEAK_MODEL = joblib.load(peak_path)
-        
-        with open(feats_path, "r") as f:
-            _FEATURE_NAMES = json.load(f)
-            
         if os.path.exists(lookup_path):
             _LOOKUP_DF = pd.read_csv(lookup_path)
-            
-    return _WAIT_MODEL, _QUEUE_MODEL, _PEAK_MODEL, _FEATURE_NAMES, _LOOKUP_DF
+        else:
+            _LOOKUP_DF = pd.DataFrame()
+    return _LOOKUP_DF
 
-def get_context_for_dt(dt: datetime, fac_id: str):
-    """Computes realistic contextual covariates given datetime and facility"""
+def normalize_horizon(horizon: Optional[str]) -> str:
+    if horizon in [None, "no_lag", "nolag", "calendar"]:
+        return "nolag"
+    return horizon
+
+def load_horizon_artifacts(horizon: str):
+    """
+    Loads preprocessor and XGBoost models for a given horizon:
+    '15m', '1h', '2h', '3h', or 'nolag'
+    """
+    global _CACHED_MODELS, _CACHED_PREPS
+    norm_h = normalize_horizon(horizon)
+    
+    prep_key = f"prep_{norm_h}"
+    wait_key = f"wait_{norm_h}"
+    queue_key = f"queue_{norm_h}"
+    peak_key = f"peak_{norm_h}"
+    
+    if prep_key not in _CACHED_PREPS:
+        prep_path = os.path.join(MODELS_DIR, f"preprocessor_{norm_h}.joblib")
+        wait_path = os.path.join(MODELS_DIR, f"model_wait_{norm_h}.joblib")
+        queue_path = os.path.join(MODELS_DIR, f"model_queue_{norm_h}.joblib")
+        peak_path = os.path.join(MODELS_DIR, f"model_peak_{norm_h}.joblib")
+        
+        _CACHED_PREPS[prep_key] = joblib.load(prep_path) if os.path.exists(prep_path) else None
+        _CACHED_MODELS[wait_key] = joblib.load(wait_path) if os.path.exists(wait_path) else None
+        _CACHED_MODELS[queue_key] = joblib.load(queue_path) if os.path.exists(queue_path) else None
+        _CACHED_MODELS[peak_key] = joblib.load(peak_path) if os.path.exists(peak_path) else None
+        
+    return (
+        _CACHED_PREPS.get(prep_key),
+        _CACHED_MODELS.get(wait_key),
+        _CACHED_MODELS.get(queue_key),
+        _CACHED_MODELS.get(peak_key)
+    )
+
+def load_ml_artifacts():
+    """Backward compatibility alias for loading default 15m artifacts."""
+    return load_horizon_artifacts("15m")
+
+def get_context_for_dt(dt: datetime, fac_id: str) -> Dict[str, Any]:
+    """Computes realistic contextual covariates given datetime and facility."""
     meta = FACILITY_METADATA.get(fac_id, FACILITY_METADATA["FAC_01"])
     hour = dt.hour
-    minute = dt.minute
     dow = dt.weekday()
     month = dt.month
     day = dt.day
@@ -114,7 +140,6 @@ def get_context_for_dt(dt: datetime, fac_id: str):
     is_weekend = 1 if dow >= 5 else 0
     is_holiday = 1 if (month, day) in [(5, 25), (7, 4), (9, 7), (10, 12)] else 0
     
-    # Meal period
     if 8 <= hour < 10:
         meal = "Breakfast"
     elif 11 <= hour < 14:
@@ -124,7 +149,6 @@ def get_context_for_dt(dt: datetime, fac_id: str):
     else:
         meal = "Non-Meal"
         
-    # Academic period estimation
     if month in [5, 6]:
         academic_period = "Registration" if (month == 5 and day <= 15) else "Normal"
         is_exam = 0
@@ -152,10 +176,9 @@ def get_context_for_dt(dt: datetime, fac_id: str):
         deadline_prox = 15
         
     class_density = 0.85 if (not is_weekend and not is_holiday and 9 <= hour <= 16) else 0.20
-    weather = "Sunny" # Default sunny context
+    weather = "Sunny"
     event_flag = 0
     
-    # Expected counters open
     if (meta["closed_on_weekend"] and is_weekend) or is_holiday or hour < 8 or hour >= 20:
         counters = 0
         staff = 0
@@ -184,8 +207,18 @@ def get_context_for_dt(dt: datetime, fac_id: str):
         "deadline_proximity_days": deadline_prox
     }
 
-def construct_feature_vector(fac_id: str, dt: datetime, overrides: Optional[Dict[str, Any]] = None):
-    _, _, _, feature_names, lookup_df = load_ml_artifacts()
+def construct_feature_frame(
+    fac_id: str,
+    dt: datetime,
+    horizon: str = "nolag",
+    overrides: Optional[Dict[str, Any]] = None,
+    current_state: Optional[Dict[str, float]] = None
+) -> pd.DataFrame:
+    """
+    Constructs a feature row matching the exact features expected by the horizon preprocessor.
+    Uses strictly train-fitted historical lookups and horizon-safe lags.
+    """
+    norm_h = normalize_horizon(horizon)
     ctx = get_context_for_dt(dt, fac_id)
     if overrides:
         ctx.update(overrides)
@@ -194,33 +227,33 @@ def construct_feature_vector(fac_id: str, dt: datetime, overrides: Optional[Dict
     minute = dt.minute
     dow = dt.weekday()
     
-    # Historical baseline lookup
-    avg_wait_hist = 8.0
-    if lookup_df is not None:
-        match = lookup_df[(lookup_df["facility_id"] == fac_id) & 
-                          (lookup_df["day_of_week"] == dow) & 
-                          (lookup_df["hour"] == hour)]
+    # Train-fitted lookup
+    lookup_df = load_lookup_table()
+    hist_wait = _GLOBAL_LOOKUP_STATS["wait"]
+    hist_queue = _GLOBAL_LOOKUP_STATS["queue"]
+    hist_peak = _GLOBAL_LOOKUP_STATS["peak"]
+    
+    if not lookup_df.empty:
+        match = lookup_df[
+            (lookup_df["facility_id"] == fac_id) &
+            (lookup_df["day_of_week"] == dow) &
+            (lookup_df["hour"] == hour)
+        ]
         if not match.empty:
-            avg_wait_hist = float(match["avg_wait_same_hour_last_week"].values[0])
+            hist_wait = float(match["hist_wait_mean"].values[0])
+            hist_queue = float(match["hist_queue_mean"].values[0])
+            hist_peak = float(match["hist_peak_rate"].values[0])
             
-    # Approximated dynamic state based on context
-    is_closed = (ctx["num_counters_open"] == 0)
-    if is_closed:
-        est_arrival_rate = 0.0
-        est_dep_rate = 0.0
-        lag1 = lag2 = lag3 = 0.0
-        rolling_wait = 0.0
-        rolling_arr = 0.0
-    else:
-        est_arrival_rate = 18.0 if (fac_id == "FAC_02" and 11 <= hour <= 14) else 12.0
-        est_dep_rate = est_arrival_rate * 0.95
-        lag1 = max(0.0, avg_wait_hist * 0.6)
-        lag2 = max(0.0, avg_wait_hist * 0.55)
-        lag3 = max(0.0, avg_wait_hist * 0.5)
-        rolling_wait = avg_wait_hist
-        rolling_arr = est_arrival_rate
-        
-    feat_dict = {
+    group_size = 2.2 if fac_id == "FAC_02" else 1.2
+    
+    row_data = {
+        # Categoricals
+        "facility_id": fac_id,
+        "facility_type": ctx["facility_type"],
+        "academic_period": ctx["academic_period"],
+        "weather": ctx["weather"],
+        "meal_period": ctx["meal_period"],
+        # Base numericals
         "hour_sin": np.sin(2 * np.pi * hour / 24.0),
         "hour_cos": np.cos(2 * np.pi * hour / 24.0),
         "minute_sin": np.sin(2 * np.pi * minute / 60.0),
@@ -230,53 +263,42 @@ def construct_feature_vector(fac_id: str, dt: datetime, overrides: Optional[Dict
         "num_counters_open": ctx["num_counters_open"],
         "num_staff_on_duty": ctx["num_staff_on_duty"],
         "avg_service_time_min": ctx["avg_service_time_min"],
-        "arrival_rate": est_arrival_rate,
-        "departure_rate": est_dep_rate,
-        "group_size": 2.2 if fac_id == "FAC_02" else 1.2,
+        "group_size": group_size,
         "class_schedule_density": ctx["class_schedule_density"],
         "is_weekend": ctx["is_weekend"],
         "is_holiday": ctx["is_holiday"],
         "is_exam_week": ctx["is_exam_week"],
         "event_flag": ctx["event_flag"],
         "deadline_proximity_days": ctx["deadline_proximity_days"],
-        "queue_length_lag_1": lag1,
-        "queue_length_lag_2": lag2,
-        "queue_length_lag_3": lag3,
-        "waiting_time_rolling_30min": rolling_wait,
-        "arrivals_rolling_1h": rolling_arr,
-        "avg_wait_same_hour_last_week": avg_wait_hist
+        "hist_wait_mean": hist_wait,
+        "hist_queue_mean": hist_queue,
+        "hist_peak_rate": hist_peak
     }
     
-    # Categorical dummy columns
-    row_df = pd.DataFrame([feat_dict])
+    # State lags depending on horizon
+    state = current_state or {}
+    is_closed = (ctx["num_counters_open"] == 0)
     
-    # Add dummy variables present in feature_names
-    for col in feature_names:
-        if col.startswith("facility_id_"):
-            target_val = col.replace("facility_id_", "")
-            row_df[col] = 1.0 if fac_id == target_val else 0.0
-        elif col.startswith("facility_type_"):
-            target_val = col.replace("facility_type_", "")
-            row_df[col] = 1.0 if ctx["facility_type"] == target_val else 0.0
-        elif col.startswith("academic_period_"):
-            target_val = col.replace("academic_period_", "")
-            row_df[col] = 1.0 if ctx["academic_period"] == target_val else 0.0
-        elif col.startswith("weather_"):
-            target_val = col.replace("weather_", "")
-            row_df[col] = 1.0 if ctx["weather"] == target_val else 0.0
-        elif col.startswith("meal_period_"):
-            target_val = col.replace("meal_period_", "")
-            row_df[col] = 1.0 if ctx["meal_period"] == target_val else 0.0
-            
-    # Align exact column order
-    for col in feature_names:
-        if col not in row_df.columns:
-            row_df[col] = 0.0
-            
-    X_vec = row_df[feature_names]
-    return X_vec, ctx
+    if norm_h == "15m":
+        row_data["queue_length_lag_1"] = 0.0 if is_closed else state.get("queue_length_lag_1", hist_queue)
+        row_data["queue_length_lag_2"] = 0.0 if is_closed else state.get("queue_length_lag_2", hist_queue * 0.95)
+        row_data["queue_length_lag_3"] = 0.0 if is_closed else state.get("queue_length_lag_3", hist_queue * 0.90)
+        row_data["waiting_time_lag_1"] = 0.0 if is_closed else state.get("waiting_time_lag_1", hist_wait)
+        row_data["waiting_time_rolling_30min"] = 0.0 if is_closed else state.get("waiting_time_rolling_30min", hist_wait)
+        row_data["arrivals_rolling_1h"] = 0.0 if is_closed else state.get("arrivals_rolling_1h", 12.0)
+    elif norm_h == "1h":
+        row_data["queue_length_lag_1h"] = 0.0 if is_closed else state.get("queue_length_lag_1h", hist_queue)
+        row_data["waiting_time_lag_1h"] = 0.0 if is_closed else state.get("waiting_time_lag_1h", hist_wait)
+    elif norm_h == "2h":
+        row_data["queue_length_lag_2h"] = 0.0 if is_closed else state.get("queue_length_lag_2h", hist_queue)
+        row_data["waiting_time_lag_2h"] = 0.0 if is_closed else state.get("waiting_time_lag_2h", hist_wait)
+    elif norm_h == "3h":
+        row_data["queue_length_lag_3h"] = 0.0 if is_closed else state.get("queue_length_lag_3h", hist_queue)
+        row_data["waiting_time_lag_3h"] = 0.0 if is_closed else state.get("waiting_time_lag_3h", hist_wait)
+        
+    return pd.DataFrame([row_data]), ctx
 
-def determine_crowd_level(wait_time: float, is_peak: bool, fac_id: str) -> str:
+def determine_crowd_level(wait_time: float, is_peak: bool) -> str:
     if wait_time < 5.0 and not is_peak:
         return "Low"
     elif wait_time < 14.0 and not is_peak:
@@ -284,17 +306,24 @@ def determine_crowd_level(wait_time: float, is_peak: bool, fac_id: str) -> str:
     else:
         return "High"
 
-def predict_queue_metrics(facility_id: str, dt: datetime, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Reusable prediction function for waiting time, queue length and peak status."""
-    wait_model, queue_model, peak_model, _, _ = load_ml_artifacts()
-    X_vec, ctx = construct_feature_vector(facility_id, dt, overrides)
-    
+def predict_queue_metrics(
+    facility_id: str,
+    dt: datetime,
+    overrides: Optional[Dict[str, Any]] = None,
+    horizon: Optional[str] = None,
+    current_state: Optional[Dict[str, float]] = None
+) -> Dict[str, Any]:
+    """
+    Horizon-aware inference engine.
+    Uses multi-horizon models when lead time is known, or calendar models for arbitrary future dates.
+    Returns prediction_method tag for transparent attribution.
+    """
     meta = FACILITY_METADATA.get(facility_id, FACILITY_METADATA["FAC_01"])
     dow = dt.weekday()
     hour = dt.hour
     is_weekend = 1 if dow >= 5 else 0
     
-    # Closed check
+    # Facility closure check
     if (meta["closed_on_weekend"] and is_weekend) or hour < 8 or hour >= 20:
         return {
             "facility_id": facility_id,
@@ -305,18 +334,91 @@ def predict_queue_metrics(facility_id: str, dt: datetime, overrides: Optional[Di
             "is_peak": False,
             "crowd_level": "Closed",
             "counters_open": 0,
-            "status_message": "Facility is currently closed"
+            "status_message": "Facility is currently closed",
+            "prediction_method": "facility_closed"
         }
         
-    raw_wait = float(wait_model.predict(X_vec)[0])
-    raw_queue = float(queue_model.predict(X_vec)[0])
-    raw_peak = int(peak_model.predict(X_vec)[0])
+    # Determine appropriate horizon if not explicitly passed
+    norm_h = normalize_horizon(horizon)
+    method_label = f"model_horizon_{norm_h}" if norm_h != "nolag" else "model_calendar_nolag"
+        
+    prep, wait_m, queue_m, peak_m = load_horizon_artifacts(norm_h)
+    X_df, ctx = construct_feature_frame(facility_id, dt, horizon=norm_h, overrides=overrides, current_state=current_state)
     
-    # Post-process bounds
+    # Check if artifacts are available
+    if prep is None or wait_m is None or queue_m is None or peak_m is None:
+        # Graceful fallback to historical train baseline lookup
+        lookup_df = load_lookup_table()
+        hist_wait = _GLOBAL_LOOKUP_STATS["wait"]
+        hist_queue = _GLOBAL_LOOKUP_STATS["queue"]
+        if not lookup_df.empty:
+            match = lookup_df[
+                (lookup_df["facility_id"] == facility_id) &
+                (lookup_df["day_of_week"] == dow) &
+                (lookup_df["hour"] == hour)
+            ]
+            if not match.empty:
+                hist_wait = float(match["hist_wait_mean"].values[0])
+                hist_queue = float(match["hist_queue_mean"].values[0])
+                
+        wait_time = round(hist_wait, 1)
+        queue_len = int(round(hist_queue))
+        is_peak = bool(wait_time >= 15.0)
+        crowd = determine_crowd_level(wait_time, is_peak)
+        return {
+            "facility_id": facility_id,
+            "facility_name": meta["name"],
+            "timestamp": dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "waiting_time_min": wait_time,
+            "queue_length": queue_len,
+            "is_peak": is_peak,
+            "crowd_level": crowd,
+            "counters_open": ctx["num_counters_open"],
+            "status_message": f"{crowd} crowd with ~{wait_time} min wait",
+            "prediction_method": "historical_lookup"
+        }
+        
+    # Model inference via preprocessor pipeline
+    try:
+        X_proc = prep.transform(X_df)
+        raw_wait = float(wait_m.predict(X_proc)[0])
+        raw_queue = float(queue_m.predict(X_proc)[0])
+        raw_peak = int(peak_m.predict(X_proc)[0])
+    except Exception as e:
+        # Graceful non-recursive fallback to historical lookup
+        lookup_df = load_lookup_table()
+        hist_wait = _GLOBAL_LOOKUP_STATS["wait"]
+        hist_queue = _GLOBAL_LOOKUP_STATS["queue"]
+        if not lookup_df.empty:
+            match = lookup_df[
+                (lookup_df["facility_id"] == facility_id) &
+                (lookup_df["day_of_week"] == dow) &
+                (lookup_df["hour"] == hour)
+            ]
+            if not match.empty:
+                hist_wait = float(match["hist_wait_mean"].values[0])
+                hist_queue = float(match["hist_queue_mean"].values[0])
+        wait_time = round(hist_wait, 1)
+        queue_len = int(round(hist_queue))
+        is_peak = bool(wait_time >= 15.0)
+        crowd = determine_crowd_level(wait_time, is_peak)
+        return {
+            "facility_id": facility_id,
+            "facility_name": meta["name"],
+            "timestamp": dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "waiting_time_min": wait_time,
+            "queue_length": queue_len,
+            "is_peak": is_peak,
+            "crowd_level": crowd,
+            "counters_open": ctx["num_counters_open"],
+            "status_message": f"{crowd} crowd with ~{wait_time} min wait",
+            "prediction_method": "historical_lookup"
+        }
+        
     wait_time = max(0.5, round(raw_wait, 1))
     queue_len = max(0, int(round(raw_queue)))
     is_peak_bool = bool(raw_peak == 1 or wait_time >= 15.0)
-    crowd_level = determine_crowd_level(wait_time, is_peak_bool, facility_id)
+    crowd_level = determine_crowd_level(wait_time, is_peak_bool)
     
     return {
         "facility_id": facility_id,
@@ -327,11 +429,25 @@ def predict_queue_metrics(facility_id: str, dt: datetime, overrides: Optional[Di
         "is_peak": is_peak_bool,
         "crowd_level": crowd_level,
         "counters_open": ctx["num_counters_open"],
-        "status_message": f"{crowd_level} crowd with ~{wait_time} min wait"
+        "status_message": f"{crowd_level} crowd with ~{wait_time} min wait",
+        "prediction_method": method_label
     }
 
-def get_facility_forecast(facility_id: str, start_dt: Optional[datetime] = None, hours: int = 3, interval_minutes: int = 15) -> List[Dict[str, Any]]:
-    """Generates predicted wait time and queue length at intervals."""
+def get_facility_forecast(
+    facility_id: str,
+    start_dt: Optional[datetime] = None,
+    hours: int = 3,
+    interval_minutes: int = 15
+) -> List[Dict[str, Any]]:
+    """
+    Generates multi-horizon forecast.
+    Selects the horizon model matched to the forecasting lead time:
+    - <= 15 min: model_horizon_15m
+    - 16 - 60 min: model_horizon_1h
+    - 61 - 120 min: model_horizon_2h
+    - 121 - 180 min: model_horizon_3h
+    - > 180 min: model_calendar_nolag
+    """
     if start_dt is None:
         start_dt = datetime.now()
         
@@ -339,8 +455,21 @@ def get_facility_forecast(facility_id: str, start_dt: Optional[datetime] = None,
     total_steps = int((hours * 60) / interval_minutes)
     
     for i in range(total_steps):
-        slot_dt = start_dt + timedelta(minutes=i * interval_minutes)
-        pred = predict_queue_metrics(facility_id, slot_dt)
+        lead_min = i * interval_minutes
+        slot_dt = start_dt + timedelta(minutes=lead_min)
+        
+        if lead_min <= 15:
+            horizon = "15m"
+        elif lead_min <= 60:
+            horizon = "1h"
+        elif lead_min <= 120:
+            horizon = "2h"
+        elif lead_min <= 180:
+            horizon = "3h"
+        else:
+            horizon = "no_lag"
+            
+        pred = predict_queue_metrics(facility_id, slot_dt, horizon=horizon)
         results.append({
             "timestamp": slot_dt.strftime("%Y-%m-%d %H:%M:%S"),
             "time_label": slot_dt.strftime("%H:%M"),
@@ -348,22 +477,27 @@ def get_facility_forecast(facility_id: str, start_dt: Optional[datetime] = None,
             "queue_length": pred["queue_length"],
             "is_peak": pred["is_peak"],
             "crowd_level": pred["crowd_level"],
-            "counters_open": pred["counters_open"]
+            "counters_open": pred["counters_open"],
+            "prediction_method": pred.get("prediction_method", f"model_horizon_{horizon}")
         })
+        
     return results
 
-def get_best_time_slots(facility_id: str, target_date: Optional[datetime] = None, top_k: int = 3) -> List[Dict[str, Any]]:
+def get_best_time_slots(
+    facility_id: str,
+    target_date: Optional[datetime] = None,
+    top_k: int = 3
+) -> List[Dict[str, Any]]:
     """Identifies the 3 best time slots today with the lowest predicted wait time."""
     if target_date is None:
         target_date = datetime.now()
         
     slots = []
-    # Test slots from 08:30 to 18:30 every 30 minutes
     base_date = target_date.date()
     for h in range(8, 19):
         for m in [0, 30]:
             slot_dt = datetime(base_date.year, base_date.month, base_date.day, h, m, 0)
-            pred = predict_queue_metrics(facility_id, slot_dt)
+            pred = predict_queue_metrics(facility_id, slot_dt, horizon="no_lag")
             if pred["crowd_level"] != "Closed":
                 slots.append({
                     "time_slot": f"{h:02d}:{m:02d} - {h if m == 0 else h+1:02d}:{(m+30)%60:02d}",
@@ -378,11 +512,11 @@ def get_best_time_slots(facility_id: str, target_date: Optional[datetime] = None
     return slots[:top_k]
 
 def get_hourly_pattern(facility_id: str) -> List[Dict[str, Any]]:
-    """Returns average wait per hour for each weekday (heatmap data)."""
-    _, _, _, _, lookup_df = load_ml_artifacts()
+    """Returns average wait per hour for each weekday (heatmap data) based on train baseline."""
+    lookup_df = load_lookup_table()
     weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     
-    if lookup_df is not None:
+    if not lookup_df.empty:
         sub = lookup_df[lookup_df["facility_id"] == facility_id]
     else:
         sub = pd.DataFrame()
@@ -393,7 +527,7 @@ def get_hourly_pattern(facility_id: str) -> List[Dict[str, Any]]:
             if not sub.empty:
                 val = sub[(sub["day_of_week"] == dow_idx) & (sub["hour"] == h)]
                 if not val.empty:
-                    avg_wait = round(float(val["avg_wait_same_hour_last_week"].values[0]), 1)
+                    avg_wait = round(float(val["hist_wait_mean"].values[0]), 1)
                 else:
                     avg_wait = 0.0 if (dow_idx >= 5 and FACILITY_METADATA.get(facility_id, {}).get("closed_on_weekend")) else 4.0
             else:
@@ -411,14 +545,10 @@ def get_hourly_pattern(facility_id: str) -> List[Dict[str, Any]]:
 
 if __name__ == "__main__":
     now = datetime(2026, 10, 15, 12, 30, 0)
-    print("Testing prediction for Main Cafeteria at 12:30 PM:")
-    p = predict_queue_metrics("FAC_02", now)
-    print(p)
-    print("\nForecast 3 hours:")
+    print("Testing multi-horizon prediction for Main Cafeteria at 12:30 PM:")
+    p = predict_queue_metrics("FAC_02", now, horizon="15m")
+    print("15m horizon prediction:", p)
+    print("\nForecast 3 hours (multi-horizon):")
     fc = get_facility_forecast("FAC_02", now, hours=3, interval_minutes=30)
     for f in fc:
-        print(f["time_label"], f["waiting_time_min"], "min wait,", f["queue_length"], "in queue")
-    print("\nBest time slots today:")
-    best = get_best_time_slots("FAC_02", now)
-    for b in best:
-        print(b)
+        print(f"{f['time_label']} | wait: {f['waiting_time_min']:4.1f}m | queue: {f['queue_length']:2d} | method: {f['prediction_method']}")
