@@ -34,6 +34,7 @@ class ForecastItem(BaseModel):
     crowd_level: str
     counters_open: int
     is_peak: bool
+    prediction_method: Optional[str] = "model_horizon_15m"
 
 class ForecastResponse(BaseModel):
     facility_id: str
@@ -57,6 +58,7 @@ class PredictResponse(BaseModel):
     crowd_level: str
     counters_open: int
     explanation: str
+    prediction_method: Optional[str] = "model_calendar_nolag"
 
 class BestTimeSlot(BaseModel):
     time_slot: str
@@ -105,12 +107,17 @@ class RecommendationItem(BaseModel):
 
 class ModelMetricsResponse(BaseModel):
     best_models: Dict[str, str]
-    waiting_time_models: Dict[str, Dict[str, float]]
-    queue_length_models: Dict[str, Dict[str, float]]
-    peak_classifier_models: Dict[str, Dict[str, float]]
+    waiting_time_models: Dict[str, Dict[str, Any]]
+    queue_length_models: Dict[str, Dict[str, Any]]
+    peak_classifier_models: Dict[str, Dict[str, Any]]
     top_feature_importance: List[Dict[str, Any]]
     model_trained_on: str
     available_plots: List[str]
+    baselines: Optional[Dict[str, Any]] = None
+    horizons: Optional[Dict[str, Any]] = None
+    walk_forward_cv: Optional[Dict[str, Any]] = None
+    per_facility: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class DailyTrendItem(BaseModel):
     date: str
