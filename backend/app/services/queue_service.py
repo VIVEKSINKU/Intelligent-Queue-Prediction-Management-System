@@ -12,16 +12,14 @@ from ml.predict import (
     predict_queue_metrics,
     get_facility_forecast,
     get_best_time_slots,
-    get_hourly_pattern,
-    load_ml_artifacts
+    get_hourly_pattern
 )
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "queue_data.csv")
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "ml", "models")
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "ml", "plots")
 
-# In-memory sensor cache (simulating edge device readings)
-_SENSOR_READINGS_CACHE = {}
+# Cached trends
 _TRENDS_CACHE = None
 
 def init_db_seeds():
@@ -98,74 +96,17 @@ def init_db_seeds():
     finally:
         db.close()
 
-# =========================================================================
-# SENSOR & TICKET SYSTEM INTEGRATION HOOK:
-# In a real campus setup, physical devices post real-time counts:
-# - Overhead stereo cameras / LiDAR sensors publish headcount at the turnstile.
-# - Ticket kiosk (e.g. Qmatic/FastTrack) pushes /ticket-dispensed /ticket-completed.
-# This function demonstrates how live hardware ingest seamlessly updates the queue state.
-# =========================================================================
-def record_realtime_sensor_event(facility_id: str, queue_count: int, counters_open: int, source: str = "CV Sensor"):
-    """
-    Called by external webhook or MQTT listener when real sensor captures queue changes.
-    """
-    _SENSOR_READINGS_CACHE[facility_id] = {
-        "queue_length": queue_count,
-        "counters_open": counters_open,
-        "timestamp": datetime.now(),
-        "source": source
-    }
-    db = SessionLocal()
-    try:
-        snapshot = QueueSnapshotDB(
-            facility_id=facility_id,
-            timestamp=datetime.now(),
-            queue_length=queue_count,
-            waiting_time_min=round(queue_count * 2.5 / max(1, counters_open), 1),
-            crowd_level="High" if queue_count > 15 else ("Medium" if queue_count > 6 else "Low"),
-            counters_open=counters_open,
-            is_peak=queue_count > 12,
-            data_source=source
-        )
-        db.add(snapshot)
-        db.commit()
-    finally:
-        db.close()
-
 def get_current_facility_status(facility_id: str, db: Session, simulated_time: Optional[datetime] = None) -> Dict[str, Any]:
     """
-    Retrieves current facility queue status.
-    If physical sensor data exists in `_SENSOR_READINGS_CACHE`, it takes precedence.
-    Otherwise, replays the trained ML model for the current time-of-day.
+    Retrieves current facility queue prediction using trained ML models.
     """
     meta = FACILITY_METADATA.get(facility_id)
     if not meta:
         raise ValueError(f"Unknown facility ID: {facility_id}")
         
     now = simulated_time or datetime.now()
-    
-    # If edge sensor has reported within the last 2 minutes, use live hardware count
-    if facility_id in _SENSOR_READINGS_CACHE:
-        cache_entry = _SENSOR_READINGS_CACHE[facility_id]
-        if (datetime.now() - cache_entry["timestamp"]).total_seconds() < 120:
-            pred = predict_queue_metrics(facility_id, now, overrides={"num_counters_open": cache_entry["counters_open"]})
-            pred["queue_length"] = cache_entry["queue_length"]
-            pred["data_source"] = cache_entry["source"]
-            pred["trend"] = "steady"
-            return pred
-            
-    # Dataset replay / ML prediction based on current time
     pred = predict_queue_metrics(facility_id, now)
     
-    # Check trend by looking back 15 minutes
-    past_pred = predict_queue_metrics(facility_id, now - timedelta(minutes=15))
-    if pred["waiting_time_min"] > past_pred["waiting_time_min"] + 1.5:
-        trend = "rising"
-    elif pred["waiting_time_min"] < past_pred["waiting_time_min"] - 1.5:
-        trend = "falling"
-    else:
-        trend = "steady"
-        
     return {
         "facility_id": facility_id,
         "name": meta["name"],
@@ -178,9 +119,9 @@ def get_current_facility_status(facility_id: str, db: Session, simulated_time: O
         "counters_open": pred["counters_open"],
         "max_counters": meta["max_counters"],
         "is_peak": pred["is_peak"],
-        "trend": trend,
+        "trend": "steady",
         "last_updated": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "data_source": "Historical Replay & XGBoost Inference"
+        "data_source": "XGBoost Supervised Prediction Model"
     }
 
 def get_all_facilities_status(db: Session, simulated_time: Optional[datetime] = None) -> List[Dict[str, Any]]:
@@ -298,7 +239,7 @@ def get_model_metrics_summary() -> Dict[str, Any]:
     return {
         "best_models": metrics_data.get("best_models", {
             "waiting_time": "XGBoost",
-            "queue_length": "Linear Regression",
+            "queue_length": "XGBoost",
             "peak_classifier": "XGBoost Classifier"
         }),
         "waiting_time_models": metrics_data.get("waiting_time", {}),
@@ -306,7 +247,12 @@ def get_model_metrics_summary() -> Dict[str, Any]:
         "peak_classifier_models": metrics_data.get("peak_classification", {}),
         "top_feature_importance": top_feats,
         "model_trained_on": "67,160 Time-Series Replay Observations (May - Oct 2026)",
-        "available_plots": available_plots
+        "available_plots": available_plots,
+        "baselines": metrics_data.get("baselines", {}),
+        "horizons": metrics_data.get("horizons", {}),
+        "walk_forward_cv": metrics_data.get("walk_forward_cv", {}),
+        "per_facility": metrics_data.get("per_facility", {}),
+        "metadata": metrics_data.get("metadata", {})
     }
 
 def get_analytics_trends() -> Dict[str, Any]:
