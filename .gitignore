@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Database & runtime SQLite
+*.db
+*.sqlite
+*.sqlite3
+backend/app/queue_system.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.npm/
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.matplotlib/
+matplotlib_cache/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Shifted / synthetic robustness caches (can be regenerated)
+data/shifted_queue_data.csv
+# ./run_app.bat
+

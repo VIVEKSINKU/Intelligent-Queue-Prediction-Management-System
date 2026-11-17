@@ -55,6 +55,15 @@ FRONTEND_DIST = os.path.join(PROJECT_ROOT, "frontend", "dist")
 if os.path.exists(FRONTEND_DIST):
     app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    fav_svg = os.path.join(FRONTEND_DIST, "favicon.svg")
+    if os.path.exists(fav_svg):
+        from fastapi.responses import FileResponse
+        return FileResponse(fav_svg, media_type="image/svg+xml")
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
 @app.get("/")
 def root():
     index_html = os.path.join(FRONTEND_DIST, "index.html")
